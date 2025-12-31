@@ -1,0 +1,349 @@
+format_version: "13"
+default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
+
+project_type: cordova
+
+# ============================================================
+# KaamCam Mobile App - Bitrise CI/CD Configuration
+# ============================================================
+# This configuration builds native Android and iOS apps that
+# wrap the KaamCam web app at https://kaamcam.com
+# ============================================================
+
+app:
+  envs:
+    - CORDOVA_PROJECT_DIR: kaamcam-app
+    - BUNDLE_ID: com.kaamcam.app
+    - APP_NAME: KaamCam
+    - PRODUCTION_URL: https://kaamcam.com
+    - ANDROID_KEYSTORE_PATH: $BITRISEIO_ANDROID_KEYSTORE_URL
+    - ANDROID_KEYSTORE_PASSWORD: $BITRISEIO_ANDROID_KEYSTORE_PASSWORD
+    - ANDROID_KEY_ALIAS: $BITRISEIO_ANDROID_KEYSTORE_ALIAS
+    - ANDROID_KEY_PASSWORD: $BITRISEIO_ANDROID_KEYSTORE_PRIVATE_KEY_PASSWORD
+
+trigger_map:
+  - push_branch: main
+    workflow: primary
+  - push_branch: develop
+    workflow: develop
+  - pull_request_source_branch: "*"
+    workflow: develop
+
+workflows:
+  # Shared initialization steps
+  _init:
+    steps:
+      - activate-ssh-key@4:
+          run_if: '{{getenv "SSH_RSA_PRIVATE_KEY" | ne ""}}'
+      - git-clone@8: {}
+      - cache-pull@2: {}
+
+  # Shared cleanup and deploy steps
+  _finish:
+    steps:
+      - cache-push@2:
+          inputs:
+            - cache_paths: |
+                node_modules
+                $CORDOVA_PROJECT_DIR/node_modules
+                $CORDOVA_PROJECT_DIR/platforms
+                $CORDOVA_PROJECT_DIR/plugins
+                ~/.gradle
+      - deploy-to-bitrise-io@2: {}
+
+  # ============================================================
+  # Development Workflow - Debug APK for testing
+  # ============================================================
+  develop:
+    description: Development builds for testing
+    before_run:
+      - _init
+    steps:
+      - nvm@1:
+          inputs:
+            - node_version: "20"
+      - script@1:
+          title: Install Cordova
+          inputs:
+            - content: |
+                #!/bin/bash
+                set -ex
+                npm install -g cordova@12
+      - script@1:
+          title: Setup Cordova project from template
+          inputs:
+            - content: |
+                #!/bin/bash
+                set -ex
+                
+                # Create Cordova project if not exists
+                if [ ! -d "$CORDOVA_PROJECT_DIR" ]; then
+                  cordova create $CORDOVA_PROJECT_DIR $BUNDLE_ID "$APP_NAME"
+                fi
+                
+                cd $CORDOVA_PROJECT_DIR
+                
+                # Copy config.xml and www from template
+                cp ../cordova-template/config.xml ./config.xml
+                rm -rf www
+                cp -r ../cordova-template/www ./www
+                
+                # Copy resources (icons and splash screens)
+                cp -r ../cordova-template/res ./res
+                
+                # Add Android platform
+                cordova platform add android@12 || true
+                
+                # Install all required plugins
+                cordova plugin add cordova-plugin-device || true
+                cordova plugin add cordova-plugin-camera || true
+                cordova plugin add cordova-plugin-geolocation || true
+                cordova plugin add cordova-plugin-file || true
+                cordova plugin add cordova-plugin-network-information || true
+                cordova plugin add cordova-plugin-statusbar || true
+                cordova plugin add cordova-plugin-splashscreen || true
+                cordova plugin add cordova-plugin-media-capture || true
+                cordova plugin add cordova-plugin-inappbrowser || true
+                cordova plugin add cordova-plugin-whitelist || true
+                cordova plugin add phonegap-plugin-push || true
+      - cordova-archive@3:
+          inputs:
+            - workdir: $CORDOVA_PROJECT_DIR
+            - platform: android
+            - target: device
+            - build_config: debug
+      - script@1:
+          title: Rename APK
+          inputs:
+            - content: |
+                #!/bin/bash
+                if [ -f "$BITRISE_APK_PATH" ]; then
+                  cp "$BITRISE_APK_PATH" "$BITRISE_DEPLOY_DIR/kaamcam-debug.apk"
+                fi
+    after_run:
+      - _finish
+
+  # ============================================================
+  # Primary Workflow - Release APK/AAB for Play Store
+  # ============================================================
+  primary:
+    description: Production release builds for Android
+    before_run:
+      - _init
+    steps:
+      - nvm@1:
+          inputs:
+            - node_version: "20"
+      - script@1:
+          title: Install Cordova
+          inputs:
+            - content: |
+                #!/bin/bash
+                set -ex
+                npm install -g cordova@12
+      - script@1:
+          title: Setup Cordova project from template
+          inputs:
+            - content: |
+                #!/bin/bash
+                set -ex
+                
+                # Create Cordova project if not exists
+                if [ ! -d "$CORDOVA_PROJECT_DIR" ]; then
+                  cordova create $CORDOVA_PROJECT_DIR $BUNDLE_ID "$APP_NAME"
+                fi
+                
+                cd $CORDOVA_PROJECT_DIR
+                
+                # Copy config.xml and www from template
+                cp ../cordova-template/config.xml ./config.xml
+                rm -rf www
+                cp -r ../cordova-template/www ./www
+                
+                # Copy resources
+                cp -r ../cordova-template/res ./res
+                
+                # Add Android platform
+                cordova platform add android@12 || true
+                
+                # Install all required plugins
+                cordova plugin add cordova-plugin-device || true
+                cordova plugin add cordova-plugin-camera || true
+                cordova plugin add cordova-plugin-geolocation || true
+                cordova plugin add cordova-plugin-file || true
+                cordova plugin add cordova-plugin-network-information || true
+                cordova plugin add cordova-plugin-statusbar || true
+                cordova plugin add cordova-plugin-splashscreen || true
+                cordova plugin add cordova-plugin-media-capture || true
+                cordova plugin add cordova-plugin-inappbrowser || true
+                cordova plugin add cordova-plugin-whitelist || true
+                cordova plugin add phonegap-plugin-push || true
+      - file-downloader@1:
+          run_if: '{{getenv "BITRISEIO_ANDROID_KEYSTORE_URL" | ne ""}}'
+          inputs:
+            - source: $BITRISEIO_ANDROID_KEYSTORE_URL
+            - destination: $CORDOVA_PROJECT_DIR/keystore.jks
+      - script@1:
+          title: Create build.json for signing
+          run_if: '{{getenv "BITRISEIO_ANDROID_KEYSTORE_URL" | ne ""}}'
+          inputs:
+            - content: |
+                #!/bin/bash
+                set -ex
+                cat > $CORDOVA_PROJECT_DIR/build.json << EOF
+                {
+                  "android": {
+                    "release": {
+                      "keystore": "keystore.jks",
+                      "storePassword": "$ANDROID_KEYSTORE_PASSWORD",
+                      "alias": "$ANDROID_KEY_ALIAS",
+                      "password": "$ANDROID_KEY_PASSWORD",
+                      "keystoreType": "jks"
+                    }
+                  }
+                }
+                EOF
+      - cordova-archive@3:
+          inputs:
+            - workdir: $CORDOVA_PROJECT_DIR
+            - platform: android
+            - target: device
+            - build_config: release
+      - sign-apk@1:
+          run_if: '{{getenv "BITRISEIO_ANDROID_KEYSTORE_URL" | ne ""}}'
+          inputs:
+            - apk_path: $BITRISE_APK_PATH
+            - keystore_url: $BITRISEIO_ANDROID_KEYSTORE_URL
+            - keystore_password: $BITRISEIO_ANDROID_KEYSTORE_PASSWORD
+            - keystore_alias: $BITRISEIO_ANDROID_KEYSTORE_ALIAS
+            - private_key_password: $BITRISEIO_ANDROID_KEYSTORE_PRIVATE_KEY_PASSWORD
+      - script@1:
+          title: Rename APK for deployment
+          inputs:
+            - content: |
+                #!/bin/bash
+                if [ -f "$BITRISE_SIGNED_APK_PATH" ]; then
+                  cp "$BITRISE_SIGNED_APK_PATH" "$BITRISE_DEPLOY_DIR/kaamcam-release.apk"
+                elif [ -f "$BITRISE_APK_PATH" ]; then
+                  cp "$BITRISE_APK_PATH" "$BITRISE_DEPLOY_DIR/kaamcam-release.apk"
+                fi
+      - google-play-deploy@3:
+          run_if: '{{getenv "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" | ne ""}}'
+          inputs:
+            - service_account_json_key_path: $GOOGLE_PLAY_SERVICE_ACCOUNT_JSON
+            - package_name: $BUNDLE_ID
+            - app_path: $BITRISE_SIGNED_APK_PATH
+            - track: internal
+    after_run:
+      - _finish
+
+  # ============================================================
+  # iOS Workflow - Release IPA for App Store
+  # ============================================================
+  ios:
+    description: iOS release builds
+    before_run:
+      - _init
+    steps:
+      - nvm@1:
+          inputs:
+            - node_version: "20"
+      - script@1:
+          title: Install Cordova
+          inputs:
+            - content: |
+                #!/bin/bash
+                set -ex
+                npm install -g cordova@12
+      - script@1:
+          title: Setup Cordova project from template
+          inputs:
+            - content: |
+                #!/bin/bash
+                set -ex
+                
+                # Create Cordova project if not exists
+                if [ ! -d "$CORDOVA_PROJECT_DIR" ]; then
+                  cordova create $CORDOVA_PROJECT_DIR $BUNDLE_ID "$APP_NAME"
+                fi
+                
+                cd $CORDOVA_PROJECT_DIR
+                
+                # Copy config.xml and www from template
+                cp ../cordova-template/config.xml ./config.xml
+                rm -rf www
+                cp -r ../cordova-template/www ./www
+                
+                # Copy resources
+                cp -r ../cordova-template/res ./res
+                
+                # Add iOS platform
+                cordova platform add ios@7 || true
+                
+                # Install all required plugins
+                cordova plugin add cordova-plugin-device || true
+                cordova plugin add cordova-plugin-camera || true
+                cordova plugin add cordova-plugin-geolocation || true
+                cordova plugin add cordova-plugin-file || true
+                cordova plugin add cordova-plugin-network-information || true
+                cordova plugin add cordova-plugin-statusbar || true
+                cordova plugin add cordova-plugin-splashscreen || true
+                cordova plugin add cordova-plugin-media-capture || true
+                cordova plugin add cordova-plugin-inappbrowser || true
+                cordova plugin add cordova-plugin-whitelist || true
+                cordova plugin add phonegap-plugin-push || true
+      - script@1:
+          title: Create iOS build.json
+          inputs:
+            - content: |
+                #!/bin/bash
+                set -ex
+                cat > $CORDOVA_PROJECT_DIR/build.json << EOF
+                {
+                  "ios": {
+                    "release": {
+                      "codeSignIdentity": "iPhone Distribution",
+                      "developmentTeam": "$APPLE_TEAM_ID",
+                      "packageType": "app-store",
+                      "provisioningProfile": "$BITRISE_PROVISIONING_PROFILE_ID"
+                    }
+                  }
+                }
+                EOF
+      - certificate-and-profile-installer@1: {}
+      - cordova-archive@3:
+          inputs:
+            - workdir: $CORDOVA_PROJECT_DIR
+            - platform: ios
+            - target: device
+            - build_config: release
+      - xcode-archive@5:
+          inputs:
+            - project_path: $CORDOVA_PROJECT_DIR/platforms/ios/KaamCam.xcworkspace
+            - scheme: KaamCam
+            - distribution_method: app-store
+            - automatic_code_signing: api-key
+      - deploy-to-itunesconnect-application-loader@1:
+          run_if: '{{getenv "APPLE_ID" | ne ""}}'
+          inputs:
+            - password: $APPLE_APP_SPECIFIC_PASSWORD
+            - app_password: $APPLE_APP_SPECIFIC_PASSWORD
+            - itunescon_user: $APPLE_ID
+            - ipa_path: $BITRISE_IPA_PATH
+    after_run:
+      - _finish
+
+  # ============================================================
+  # Deploy All - Build both Android and iOS
+  # ============================================================
+  deploy-all:
+    description: Build both Android and iOS for production
+    before_run:
+      - primary
+    after_run:
+      - ios
+
+meta:
+  bitrise.io:
+    stack: linux-docker-android-22.04
+    machine_type_id: standard
