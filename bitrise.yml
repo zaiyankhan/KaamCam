@@ -3,13 +3,6 @@ default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
 
 project_type: cordova
 
-# ============================================================
-# KaamCam Mobile App - Bitrise CI/CD Configuration
-# ============================================================
-# This configuration builds native Android and iOS apps that
-# wrap the KaamCam web app at https://kaamcam.com
-# ============================================================
-
 app:
   envs:
     - CORDOVA_PROJECT_DIR: kaamcam-app
@@ -20,153 +13,107 @@ app:
 trigger_map:
   - push_branch: main
     workflow: primary
+  - push_branch: master
+    workflow: primary
   - push_branch: develop
     workflow: develop
   - pull_request_source_branch: "*"
     workflow: develop
 
 workflows:
-  # ============================================================
-  # Development Workflow - Debug APK for testing
-  # ============================================================
   develop:
-    description: Development builds for testing
     steps:
       - activate-ssh-key@4:
           run_if: '{{getenv "SSH_RSA_PRIVATE_KEY" | ne ""}}'
       - git-clone@8: {}
       - script@1:
-          title: Install Cordova CLI
+          title: Install Cordova, Gradle 8, and Android SDK
           inputs:
             - content: |
                 #!/bin/bash
                 set -ex
                 npm install -g cordova@12
+                brew install gradle@8
+                export PATH="/opt/homebrew/opt/gradle@8/bin:$PATH"
+                yes | sdkmanager --install "build-tools;33.0.2" "platforms;android-34"
       - script@1:
           title: Create and setup Cordova project
           inputs:
             - content: |
                 #!/bin/bash
                 set -ex
-                
-                # Create Cordova project
+                export PATH="/opt/homebrew/opt/gradle@8/bin:$PATH"
                 cordova create $CORDOVA_PROJECT_DIR $BUNDLE_ID "$APP_NAME"
                 cd $CORDOVA_PROJECT_DIR
-                
-                # Copy config.xml and www from repo root (template is the root)
                 cp ../config.xml ./config.xml
-                rm -rf www
-                cp -r ../www ./www
-                
-                # Copy resources if they exist
-                if [ -d "../res" ]; then
-                  cp -r ../res ./res
-                fi
-                
-                # Add Android platform
+                rm -rf www && cp -r ../www ./www
+                [ -d "../res" ] && cp -r ../res ./res
                 cordova platform add android@12
-                
-                # Install all required plugins
-                cordova plugin add cordova-plugin-device
-                cordova plugin add cordova-plugin-camera
-                cordova plugin add cordova-plugin-geolocation
-                cordova plugin add cordova-plugin-file
-                cordova plugin add cordova-plugin-network-information
-                cordova plugin add cordova-plugin-statusbar
-                cordova plugin add cordova-plugin-splashscreen
-                cordova plugin add cordova-plugin-media-capture
-                cordova plugin add cordova-plugin-inappbrowser
-                cordova plugin add cordova-plugin-whitelist
-                cordova plugin add phonegap-plugin-push || echo "Push plugin install failed - continuing"
+                cordova plugin add cordova-plugin-device cordova-plugin-camera cordova-plugin-geolocation cordova-plugin-file cordova-plugin-network-information cordova-plugin-statusbar cordova-plugin-media-capture cordova-plugin-inappbrowser
       - script@1:
           title: Build Debug APK
           inputs:
             - content: |
                 #!/bin/bash
                 set -ex
+                export PATH="/opt/homebrew/opt/gradle@8/bin:$PATH"
                 cd $CORDOVA_PROJECT_DIR
                 cordova build android --debug
-                
-                # Copy APK to deploy directory
-                APK_PATH=$(find platforms/android -name "*.apk" | head -1)
+                APK_PATH=$(find . -name "*debug*.apk" -type f | head -1)
+                [ -z "$APK_PATH" ] && APK_PATH=$(find . -name "*.apk" -type f | head -1)
                 if [ -f "$APK_PATH" ]; then
                   cp "$APK_PATH" "$BITRISE_DEPLOY_DIR/kaamcam-debug.apk"
                   envman add --key BITRISE_APK_PATH --value "$BITRISE_DEPLOY_DIR/kaamcam-debug.apk"
                 fi
       - deploy-to-bitrise-io@2: {}
 
-  # ============================================================
-  # Primary Workflow - Release APK for Play Store
-  # ============================================================
   primary:
-    description: Production release builds for Android
     steps:
       - activate-ssh-key@4:
           run_if: '{{getenv "SSH_RSA_PRIVATE_KEY" | ne ""}}'
       - git-clone@8: {}
       - script@1:
-          title: Install Cordova CLI
+          title: Install Cordova, Gradle 8, and Android SDK
           inputs:
             - content: |
                 #!/bin/bash
                 set -ex
                 npm install -g cordova@12
+                brew install gradle@8
+                export PATH="/opt/homebrew/opt/gradle@8/bin:$PATH"
+                yes | sdkmanager --install "build-tools;33.0.2" "platforms;android-34"
       - script@1:
           title: Create and setup Cordova project
           inputs:
             - content: |
                 #!/bin/bash
                 set -ex
-                
-                # Create Cordova project
+                export PATH="/opt/homebrew/opt/gradle@8/bin:$PATH"
                 cordova create $CORDOVA_PROJECT_DIR $BUNDLE_ID "$APP_NAME"
                 cd $CORDOVA_PROJECT_DIR
-                
-                # Copy config.xml and www from repo root
                 cp ../config.xml ./config.xml
-                rm -rf www
-                cp -r ../www ./www
-                
-                # Copy resources if they exist
-                if [ -d "../res" ]; then
-                  cp -r ../res ./res
-                fi
-                
-                # Add Android platform
+                rm -rf www && cp -r ../www ./www
+                [ -d "../res" ] && cp -r ../res ./res
                 cordova platform add android@12
-                
-                # Install all required plugins
-                cordova plugin add cordova-plugin-device
-                cordova plugin add cordova-plugin-camera
-                cordova plugin add cordova-plugin-geolocation
-                cordova plugin add cordova-plugin-file
-                cordova plugin add cordova-plugin-network-information
-                cordova plugin add cordova-plugin-statusbar
-                cordova plugin add cordova-plugin-splashscreen
-                cordova plugin add cordova-plugin-media-capture
-                cordova plugin add cordova-plugin-inappbrowser
-                cordova plugin add cordova-plugin-whitelist
-                cordova plugin add phonegap-plugin-push || echo "Push plugin install failed - continuing"
+                cordova plugin add cordova-plugin-device cordova-plugin-camera cordova-plugin-geolocation cordova-plugin-file cordova-plugin-network-information cordova-plugin-statusbar cordova-plugin-media-capture cordova-plugin-inappbrowser
       - script@1:
           title: Build Release APK
           inputs:
             - content: |
                 #!/bin/bash
                 set -ex
+                export PATH="/opt/homebrew/opt/gradle@8/bin:$PATH"
                 cd $CORDOVA_PROJECT_DIR
-                
-                # Build release APK (unsigned if no keystore configured)
-                cordova build android --release
-                
-                # Find and copy APK
-                APK_PATH=$(find platforms/android -name "*release*.apk" | head -1)
-                if [ -z "$APK_PATH" ]; then
-                  APK_PATH=$(find platforms/android -name "*.apk" | head -1)
-                fi
-                
+                cordova build android --release -- --packageType=apk
+                APK_PATH=$(find . -name "*release*.apk" -type f | head -1)
+                [ -z "$APK_PATH" ] && APK_PATH=$(find . -name "*.apk" -type f | head -1)
                 if [ -f "$APK_PATH" ]; then
-                  cp "$APK_PATH" "$BITRISE_DEPLOY_DIR/kaamcam-release-unsigned.apk"
-                  envman add --key BITRISE_APK_PATH --value "$BITRISE_DEPLOY_DIR/kaamcam-release-unsigned.apk"
+                  cp "$APK_PATH" "$BITRISE_DEPLOY_DIR/kaamcam-release.apk"
+                  envman add --key BITRISE_APK_PATH --value "$BITRISE_DEPLOY_DIR/kaamcam-release.apk"
+                fi
+                AAB_PATH=$(find . -name "*.aab" -type f | head -1)
+                if [ -f "$AAB_PATH" ]; then
+                  cp "$AAB_PATH" "$BITRISE_DEPLOY_DIR/kaamcam-release.aab"
                 fi
       - sign-apk@1:
           run_if: '{{getenv "BITRISEIO_ANDROID_KEYSTORE_URL" | ne ""}}'
@@ -174,11 +121,7 @@ workflows:
             - apk_path: $BITRISE_APK_PATH
       - deploy-to-bitrise-io@2: {}
 
-  # ============================================================
-  # iOS Workflow - Release IPA for App Store
-  # ============================================================
   ios:
-    description: iOS release builds
     steps:
       - activate-ssh-key@4:
           run_if: '{{getenv "SSH_RSA_PRIVATE_KEY" | ne ""}}'
@@ -196,36 +139,13 @@ workflows:
             - content: |
                 #!/bin/bash
                 set -ex
-                
-                # Create Cordova project
                 cordova create $CORDOVA_PROJECT_DIR $BUNDLE_ID "$APP_NAME"
                 cd $CORDOVA_PROJECT_DIR
-                
-                # Copy config.xml and www from repo root
                 cp ../config.xml ./config.xml
-                rm -rf www
-                cp -r ../www ./www
-                
-                # Copy resources if they exist
-                if [ -d "../res" ]; then
-                  cp -r ../res ./res
-                fi
-                
-                # Add iOS platform
+                rm -rf www && cp -r ../www ./www
+                [ -d "../res" ] && cp -r ../res ./res
                 cordova platform add ios@7
-                
-                # Install all required plugins
-                cordova plugin add cordova-plugin-device
-                cordova plugin add cordova-plugin-camera
-                cordova plugin add cordova-plugin-geolocation
-                cordova plugin add cordova-plugin-file
-                cordova plugin add cordova-plugin-network-information
-                cordova plugin add cordova-plugin-statusbar
-                cordova plugin add cordova-plugin-splashscreen
-                cordova plugin add cordova-plugin-media-capture
-                cordova plugin add cordova-plugin-inappbrowser
-                cordova plugin add cordova-plugin-whitelist
-                cordova plugin add phonegap-plugin-push || echo "Push plugin install failed - continuing"
+                cordova plugin add cordova-plugin-device cordova-plugin-camera cordova-plugin-geolocation cordova-plugin-file cordova-plugin-network-information cordova-plugin-statusbar cordova-plugin-media-capture cordova-plugin-inappbrowser
       - certificate-and-profile-installer@1: {}
       - script@1:
           title: Build iOS Release
@@ -234,19 +154,12 @@ workflows:
                 #!/bin/bash
                 set -ex
                 cd $CORDOVA_PROJECT_DIR
-                
-                # Build iOS release
                 cordova build ios --release --device
-                
-                # Find IPA
                 IPA_PATH=$(find platforms/ios -name "*.ipa" | head -1)
-                if [ -f "$IPA_PATH" ]; then
-                  cp "$IPA_PATH" "$BITRISE_DEPLOY_DIR/kaamcam-release.ipa"
-                  envman add --key BITRISE_IPA_PATH --value "$BITRISE_DEPLOY_DIR/kaamcam-release.ipa"
-                fi
+                [ -f "$IPA_PATH" ] && cp "$IPA_PATH" "$BITRISE_DEPLOY_DIR/kaamcam-release.ipa" && envman add --key BITRISE_IPA_PATH --value "$BITRISE_DEPLOY_DIR/kaamcam-release.ipa"
       - deploy-to-bitrise-io@2: {}
 
 meta:
   bitrise.io:
-    stack: linux-docker-android-22.04
-    machine_type_id: standard
+    stack: osx-xcode-16.4.x
+    machine_type_id: g2-m1.4core
