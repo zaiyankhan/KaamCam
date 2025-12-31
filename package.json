@@ -1,0 +1,10 @@
+{
+  "name": "kaamcam-cordova",
+  "version": "1.0.0",
+  "description": "KaamCam native mobile app wrapper",
+  "scripts": {
+    "build": "echo 'Cordova build handled by bitrise.yml'"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
