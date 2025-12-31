@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="msapplication-tap-highlight" content="no">
+    <meta name="theme-color" content="#10B981">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="KaamCam">
+    
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self' https://kaamcam.com https://*.kaamcam.com data: blob: gap:;
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://kaamcam.com https://*.kaamcam.com https://*.googleapis.com https://*.gstatic.com;
+        style-src 'self' 'unsafe-inline' https://kaamcam.com https://*.kaamcam.com https://fonts.googleapis.com;
+        img-src 'self' data: blob: https: http:;
+        font-src 'self' data: https://fonts.gstatic.com;
+        connect-src 'self' https://kaamcam.com https://*.kaamcam.com wss://*.kaamcam.com https://*.googleapis.com https://*.firebase.com wss://*.firebaseio.com https://fcm.googleapis.com;
+        media-src 'self' blob: https://kaamcam.com https://*.kaamcam.com;
+        frame-src 'self' https://kaamcam.com https://*.kaamcam.com https://*.stripe.com;
+    ">
+    
+    <title>KaamCam</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #10B981;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        
+        /* Animated Splash Screen */
+        #splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #10B981 0%, #059669 50%, #047857 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        
+        #splash-screen.fade-out {
+            opacity: 0;
+            transform: scale(1.1);
+            pointer-events: none;
+        }
+        
+        .splash-logo-container {
+            position: relative;
+            width: 180px;
+            height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Animated rings around logo */
+        .splash-ring {
+            position: absolute;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            animation: pulse-ring 2s ease-out infinite;
+        }
+        
+        .splash-ring:nth-child(1) {
+            width: 140px;
+            height: 140px;
+            animation-delay: 0s;
+        }
+        
+        .splash-ring:nth-child(2) {
+            width: 170px;
+            height: 170px;
+            animation-delay: 0.3s;
+        }
+        
+        .splash-ring:nth-child(3) {
+            width: 200px;
+            height: 200px;
+            animation-delay: 0.6s;
+        }
+        
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(0.8);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1.5);
+                opacity: 0;
+            }
+        }
+        
+        /* Main logo */
+        .splash-logo {
+            width: 120px;
+            height: 120px;
+            position: relative;
+            z-index: 2;
+            animation: logo-entrance 1s ease-out forwards, logo-float 3s ease-in-out infinite 1s;
+        }
+        
+        @keyframes logo-entrance {
+            0% {
+                opacity: 0;
+                transform: scale(0.5) rotate(-10deg);
+            }
+            50% {
+                transform: scale(1.1) rotate(5deg);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) rotate(0deg);
+            }
+        }
+        
+        @keyframes logo-float {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+        
+        /* Camera shutter animation on logo */
+        .shutter-animation {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            animation: shutter 2s ease-in-out infinite;
+            z-index: 1;
+        }
+        
+        @keyframes shutter {
+            0%, 90%, 100% {
+                transform: scale(1);
+                opacity: 0;
+            }
+            95% {
+                transform: scale(0.9);
+                opacity: 0.5;
+            }
+        }
+        
+        /* App name */
+        .splash-title {
+            color: white;
+            font-size: 36px;
+            font-weight: 800;
+            letter-spacing: 3px;
+            margin-top: 30px;
+            opacity: 0;
+            animation: fade-in-up 0.8s ease-out 0.5s forwards;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .splash-tagline {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+            margin-top: 10px;
+            opacity: 0;
+            animation: fade-in-up 0.8s ease-out 0.8s forwards;
+            letter-spacing: 1px;
+        }
+        
+        @keyframes fade-in-up {
+            0% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Loading dots */
+        .loading-dots {
+            display: flex;
+            gap: 8px;
+            margin-top: 40px;
+            opacity: 0;
+            animation: fade-in-up 0.5s ease-out 1.2s forwards;
+        }
+        
+        .loading-dot {
+            width: 10px;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            animation: dot-bounce 1.4s ease-in-out infinite;
+        }
+        
+        .loading-dot:nth-child(1) { animation-delay: 0s; }
+        .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes dot-bounce {
+            0%, 80%, 100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            40% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+        }
+        
+        /* Main app container */
+        #app-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        #app-container.visible {
+            opacity: 1;
+        }
+        
+        #app-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #f5f5f5;
+        }
+        
+        /* Offline indicator */
+        #offline-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #ef4444;
+            color: white;
+            padding: 8px 16px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 9999;
+            transform: translateY(-100%);
+            transition: transform 0.3s ease;
+            padding-top: env(safe-area-inset-top, 8px);
+        }
+        
+        #offline-banner.visible {
+            transform: translateY(0);
+        }
+        
+        /* Error state */
+        #error-screen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #f5f5f5;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            text-align: center;
+            z-index: 9998;
+        }
+        
+        #error-screen.visible {
+            display: flex;
+        }
+        
+        .error-icon {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+        }
+        
+        .error-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 10px;
+        }
+        
+        .error-message {
+            font-size: 16px;
+            color: #6b7280;
+            margin-bottom: 30px;
+            max-width: 300px;
+        }
+        
+        .retry-button {
+            background: #10B981;
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+        
+        .retry-button:active {
+            background: #059669;
+            transform: scale(0.98);
+        }
+        
+        /* Pull to refresh indicator */
+        #ptr-indicator {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100%);
+            background: white;
+            padding: 10px 20px;
+            border-radius: 0 0 20px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 9997;
+            transition: transform 0.3s ease;
+        }
+        
+        #ptr-indicator.visible {
+            transform: translateX(-50%) translateY(env(safe-area-inset-top, 0));
+        }
+        
+        .ptr-spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid #e5e7eb;
+            border-top-color: #10B981;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Safe area padding for notched devices */
+        .safe-area-top {
+            padding-top: env(safe-area-inset-top, 0);
+        }
+        
+        .safe-area-bottom {
+            padding-bottom: env(safe-area-inset-bottom, 0);
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated Splash Screen -->
+    <div id="splash-screen">
+        <div class="splash-logo-container">
+            <div class="splash-ring"></div>
+            <div class="splash-ring"></div>
+            <div class="splash-ring"></div>
+            <div class="shutter-animation"></div>
+            <svg class="splash-logo" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Camera body -->
+                <rect x="10" y="25" width="100" height="75" rx="16" fill="white"/>
+                <!-- Camera lens housing -->
+                <circle cx="60" cy="62" r="35" fill="#1f2937"/>
+                <circle cx="60" cy="62" r="28" fill="#374151"/>
+                <circle cx="60" cy="62" r="20" fill="#1f2937"/>
+                <circle cx="60" cy="62" r="12" fill="#10B981"/>
+                <circle cx="60" cy="62" r="6" fill="#1f2937"/>
+                <!-- Flash/viewfinder -->
+                <rect x="70" y="15" width="25" height="15" rx="4" fill="white"/>
+                <rect x="75" y="18" width="15" height="9" rx="2" fill="#1f2937"/>
+                <!-- Lens reflection -->
+                <ellipse cx="50" cy="55" rx="4" ry="6" fill="rgba(255,255,255,0.3)" transform="rotate(-30 50 55)"/>
+            </svg>
+        </div>
+        <div class="splash-title">KAAMCAM</div>
+        <div class="splash-tagline">Field Documentation Made Simple</div>
+        <div class="loading-dots">
+            <div class="loading-dot"></div>
+            <div class="loading-dot"></div>
+            <div class="loading-dot"></div>
+        </div>
+    </div>
+    
+    <!-- Offline Banner -->
+    <div id="offline-banner">
+        <span>You're offline. Some features may be limited.</span>
+    </div>
+    
+    <!-- Main App Container -->
+    <div id="app-container">
+        <iframe id="app-frame" src="about:blank" allow="camera; microphone; geolocation"></iframe>
+    </div>
+    
+    <!-- Error Screen -->
+    <div id="error-screen">
+        <svg class="error-icon" viewBox="0 0 80 80" fill="none">
+            <circle cx="40" cy="40" r="38" stroke="#ef4444" stroke-width="4"/>
+            <path d="M28 28L52 52M52 28L28 52" stroke="#ef4444" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+        <div class="error-title">Connection Error</div>
+        <div class="error-message">Unable to connect to KaamCam. Please check your internet connection and try again.</div>
+        <button class="retry-button" onclick="retryConnection()">Try Again</button>
+    </div>
+    
+    <!-- Pull to Refresh Indicator -->
+    <div id="ptr-indicator">
+        <div class="ptr-spinner"></div>
+    </div>
+    
+    <script src="cordova.js"></script>
+    <script>
+        // KaamCam Cordova App - Native Bridge
+        const PRODUCTION_URL = 'https://kaamcam.com';
+        const LOGIN_PATH = '/login';
+        
+        // App state
+        let isOnline = navigator.onLine;
+        let deviceReady = false;
+        let appLoaded = false;
+        let pushToken = null;
+        
+        // DOM elements
+        const splashScreen = document.getElementById('splash-screen');
+        const appContainer = document.getElementById('app-container');
+        const appFrame = document.getElementById('app-frame');
+        const offlineBanner = document.getElementById('offline-banner');
+        const errorScreen = document.getElementById('error-screen');
+        const ptrIndicator = document.getElementById('ptr-indicator');
+        
+        // Initialize when device is ready
+        document.addEventListener('deviceready', onDeviceReady, false);
+        
+        // Fallback for browser testing
+        if (!window.cordova) {
+            setTimeout(onDeviceReady, 1000);
+        }
+        
+        function onDeviceReady() {
+            console.log('KaamCam: Device ready');
+            deviceReady = true;
+            
+            // Set up native features
+            setupStatusBar();
+            setupNetworkListeners();
+            setupPushNotifications();
+            setupBackButton();
+            setupKeyboard();
+            
+            // Load the app
+            loadApp();
+        }
+        
+        function setupStatusBar() {
+            if (window.StatusBar) {
+                StatusBar.styleLightContent();
+                StatusBar.backgroundColorByHexString('#10B981');
+                StatusBar.overlaysWebView(false);
+            }
+        }
+        
+        function setupNetworkListeners() {
+            // Network status listeners
+            document.addEventListener('online', onOnline, false);
+            document.addEventListener('offline', onOffline, false);
+            
+            // Check initial state
+            if (navigator.connection) {
+                isOnline = navigator.connection.type !== Connection.NONE;
+            }
+            updateOfflineBanner();
+        }
+        
+        function onOnline() {
+            console.log('KaamCam: Online');
+            isOnline = true;
+            updateOfflineBanner();
+            
+            // Try to reload if showing error
+            if (errorScreen.classList.contains('visible')) {
+                retryConnection();
+            }
+        }
+        
+        function onOffline() {
+            console.log('KaamCam: Offline');
+            isOnline = false;
+            updateOfflineBanner();
+        }
+        
+        function updateOfflineBanner() {
+            if (isOnline) {
+                offlineBanner.classList.remove('visible');
+            } else {
+                offlineBanner.classList.add('visible');
+            }
+        }
+        
+        function setupPushNotifications() {
+            if (typeof PushNotification === 'undefined') {
+                console.log('KaamCam: Push plugin not available');
+                return;
+            }
+            
+            const push = PushNotification.init({
+                android: {
+                    senderID: 'YOUR_FCM_SENDER_ID',
+                    icon: 'notification_icon',
+                    iconColor: '#10B981',
+                    forceShow: true,
+                    vibrate: true,
+                    sound: true
+                },
+                ios: {
+                    alert: true,
+                    badge: true,
+                    sound: true,
+                    clearBadge: true
+                }
+            });
+            
+            push.on('registration', function(data) {
+                console.log('KaamCam: Push registration token:', data.registrationId);
+                pushToken = data.registrationId;
+                
+                // Send token to web app
+                sendToWebApp('pushToken', { token: pushToken });
+            });
+            
+            push.on('notification', function(data) {
+                console.log('KaamCam: Push notification received:', data);
+                
+                // Handle notification tap
+                if (data.additionalData && data.additionalData.foreground === false) {
+                    // App was opened from notification
+                    if (data.additionalData.path) {
+                        navigateTo(data.additionalData.path);
+                    }
+                }
+                
+                // Send to web app
+                sendToWebApp('pushNotification', data);
+            });
+            
+            push.on('error', function(e) {
+                console.error('KaamCam: Push error:', e.message);
+            });
+        }
+        
+        function setupBackButton() {
+            document.addEventListener('backbutton', function(e) {
+                e.preventDefault();
+                
+                // Try to go back in iframe history first
+                try {
+                    if (appFrame.contentWindow && appFrame.contentWindow.history.length > 1) {
+                        appFrame.contentWindow.history.back();
+                    } else {
+                        // Confirm exit
+                        if (navigator.notification) {
+                            navigator.notification.confirm(
+                                'Are you sure you want to exit?',
+                                function(buttonIndex) {
+                                    if (buttonIndex === 1) {
+                                        navigator.app.exitApp();
+                                    }
+                                },
+                                'Exit KaamCam',
+                                ['Exit', 'Cancel']
+                            );
+                        } else if (confirm('Are you sure you want to exit?')) {
+                            navigator.app.exitApp();
+                        }
+                    }
+                } catch (e) {
+                    console.log('KaamCam: Back button error:', e);
+                }
+            }, false);
+        }
+        
+        function setupKeyboard() {
+            if (window.Keyboard) {
+                Keyboard.shrinkView(true);
+                Keyboard.hideFormAccessoryBar(false);
+            }
+        }
+        
+        function loadApp() {
+            console.log('KaamCam: Loading app...');
+            
+            // Set iframe source
+            const targetUrl = PRODUCTION_URL + LOGIN_PATH;
+            appFrame.src = targetUrl;
+            
+            // Handle iframe load
+            appFrame.onload = function() {
+                console.log('KaamCam: App loaded');
+                appLoaded = true;
+                hideSplashScreen();
+                errorScreen.classList.remove('visible');
+                
+                // Inject native bridge
+                injectNativeBridge();
+            };
+            
+            appFrame.onerror = function(e) {
+                console.error('KaamCam: App load error:', e);
+                showErrorScreen();
+            };
+            
+            // Timeout fallback
+            setTimeout(function() {
+                if (!appLoaded) {
+                    console.log('KaamCam: Load timeout, hiding splash');
+                    hideSplashScreen();
+                }
+            }, 8000);
+        }
+        
+        function hideSplashScreen() {
+            // Hide native splash first
+            if (navigator.splashscreen) {
+                navigator.splashscreen.hide();
+            }
+            
+            // Animate out custom splash
+            splashScreen.classList.add('fade-out');
+            appContainer.classList.add('visible');
+            
+            // Remove splash from DOM after animation
+            setTimeout(function() {
+                splashScreen.style.display = 'none';
+            }, 600);
+        }
+        
+        function showErrorScreen() {
+            hideSplashScreen();
+            if (!isOnline) {
+                errorScreen.classList.add('visible');
+            }
+        }
+        
+        function retryConnection() {
+            errorScreen.classList.remove('visible');
+            ptrIndicator.classList.add('visible');
+            
+            // Reload iframe
+            appFrame.src = PRODUCTION_URL + LOGIN_PATH;
+            
+            setTimeout(function() {
+                ptrIndicator.classList.remove('visible');
+            }, 2000);
+        }
+        
+        function injectNativeBridge() {
+            try {
+                const bridgeScript = `
+                    window.KaamCamNative = {
+                        isNativeApp: true,
+                        platform: '${window.device ? device.platform : 'browser'}',
+                        version: '${window.device ? device.version : 'unknown'}',
+                        
+                        takePhoto: function(options) {
+                            window.parent.postMessage({ type: 'takePhoto', options: options }, '*');
+                        },
+                        
+                        getLocation: function() {
+                            window.parent.postMessage({ type: 'getLocation' }, '*');
+                        },
+                        
+                        getPushToken: function() {
+                            window.parent.postMessage({ type: 'getPushToken' }, '*');
+                        },
+                        
+                        vibrate: function(pattern) {
+                            window.parent.postMessage({ type: 'vibrate', pattern: pattern }, '*');
+                        },
+                        
+                        showToast: function(message) {
+                            window.parent.postMessage({ type: 'showToast', message: message }, '*');
+                        },
+                        
+                        openUrl: function(url) {
+                            window.parent.postMessage({ type: 'openUrl', url: url }, '*');
+                        },
+                        
+                        scanBarcode: function() {
+                            window.parent.postMessage({ type: 'scanBarcode' }, '*');
+                        }
+                    };
+                    
+                    console.log('KaamCam Native Bridge initialized');
+                `;
+                
+                appFrame.contentWindow.eval(bridgeScript);
+            } catch (e) {
+                console.log('KaamCam: Could not inject bridge (CORS):', e.message);
+            }
+        }
+        
+        // Listen for messages from web app
+        window.addEventListener('message', function(event) {
+            if (event.origin !== PRODUCTION_URL) return;
+            
+            const data = event.data;
+            if (!data || !data.type) return;
+            
+            console.log('KaamCam: Message from web app:', data.type);
+            
+            switch (data.type) {
+                case 'takePhoto':
+                    takePhoto(data.options || {});
+                    break;
+                case 'getLocation':
+                    getLocation();
+                    break;
+                case 'getPushToken':
+                    sendToWebApp('pushToken', { token: pushToken });
+                    break;
+                case 'vibrate':
+                    vibrate(data.pattern);
+                    break;
+                case 'openUrl':
+                    openExternalUrl(data.url);
+                    break;
+                case 'navigate':
+                    navigateTo(data.path);
+                    break;
+            }
+        });
+        
+        function sendToWebApp(type, data) {
+            try {
+                appFrame.contentWindow.postMessage({ type: type, ...data }, PRODUCTION_URL);
+            } catch (e) {
+                console.log('KaamCam: Could not send to web app:', e.message);
+            }
+        }
+        
+        function takePhoto(options) {
+            if (!navigator.camera) {
+                console.log('KaamCam: Camera not available');
+                return;
+            }
+            
+            navigator.camera.getPicture(
+                function(imageData) {
+                    sendToWebApp('photoResult', { success: true, data: imageData });
+                },
+                function(error) {
+                    sendToWebApp('photoResult', { success: false, error: error });
+                },
+                {
+                    quality: options.quality || 80,
+                    destinationType: Camera.DestinationType.DATA_URL,
+                    sourceType: options.sourceType || Camera.PictureSourceType.CAMERA,
+                    encodingType: Camera.EncodingType.JPEG,
+                    mediaType: Camera.MediaType.PICTURE,
+                    correctOrientation: true,
+                    saveToPhotoAlbum: options.saveToAlbum || false
+                }
+            );
+        }
+        
+        function getLocation() {
+            if (!navigator.geolocation) {
+                console.log('KaamCam: Geolocation not available');
+                return;
+            }
+            
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    sendToWebApp('locationResult', {
+                        success: true,
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                        accuracy: position.coords.accuracy
+                    });
+                },
+                function(error) {
+                    sendToWebApp('locationResult', { success: false, error: error.message });
+                },
+                { enableHighAccuracy: true, timeout: 15000 }
+            );
+        }
+        
+        function vibrate(pattern) {
+            if (navigator.vibrate) {
+                navigator.vibrate(pattern || 100);
+            }
+        }
+        
+        function openExternalUrl(url) {
+            if (window.cordova && cordova.InAppBrowser) {
+                cordova.InAppBrowser.open(url, '_system');
+            } else {
+                window.open(url, '_blank');
+            }
+        }
+        
+        function navigateTo(path) {
+            try {
+                appFrame.contentWindow.location.href = PRODUCTION_URL + path;
+            } catch (e) {
+                appFrame.src = PRODUCTION_URL + path;
+            }
+        }
+    </script>
+</body>
+</html>
