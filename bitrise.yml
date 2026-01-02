@@ -60,11 +60,11 @@ workflows:
                 export PATH="/opt/homebrew/opt/gradle@8/bin:$PATH"
                 cd "$BITRISE_SOURCE_DIR/$CORDOVA_PROJECT_DIR"
                 cordova build android --debug
-                echo "Searching for APK files..."
-                find platforms -name "*.apk" -type f 2>/dev/null || true
-                APK_PATH=$(find platforms -name "*debug*.apk" -type f 2>/dev/null | head -1)
+                echo "Searching for APK files in $BITRISE_SOURCE_DIR..."
+                find "$BITRISE_SOURCE_DIR" -name "*.apk" -type f 2>/dev/null || true
+                APK_PATH=$(find "$BITRISE_SOURCE_DIR" -name "*debug*.apk" -type f 2>/dev/null | head -1)
                 if [ -z "$APK_PATH" ]; then
-                  APK_PATH=$(find platforms -name "*.apk" -type f 2>/dev/null | head -1)
+                  APK_PATH=$(find "$BITRISE_SOURCE_DIR" -name "*.apk" -type f 2>/dev/null | head -1)
                 fi
                 if [ -n "$APK_PATH" ] && [ -f "$APK_PATH" ]; then
                   echo "Found APK: $APK_PATH"
@@ -115,11 +115,11 @@ workflows:
                 export PATH="/opt/homebrew/opt/gradle@8/bin:$PATH"
                 cd "$BITRISE_SOURCE_DIR/$CORDOVA_PROJECT_DIR"
                 cordova build android --release -- --packageType=apk
-                echo "Searching for APK files..."
-                find platforms -name "*.apk" -type f 2>/dev/null || true
-                APK_PATH=$(find platforms -name "*release*.apk" -type f 2>/dev/null | head -1)
+                echo "Searching for APK files in $BITRISE_SOURCE_DIR..."
+                find "$BITRISE_SOURCE_DIR" -name "*.apk" -type f 2>/dev/null || true
+                APK_PATH=$(find "$BITRISE_SOURCE_DIR" -name "*release*.apk" -type f 2>/dev/null | head -1)
                 if [ -z "$APK_PATH" ]; then
-                  APK_PATH=$(find platforms -name "*.apk" -type f 2>/dev/null | head -1)
+                  APK_PATH=$(find "$BITRISE_SOURCE_DIR" -name "*.apk" -type f 2>/dev/null | head -1)
                 fi
                 if [ -n "$APK_PATH" ] && [ -f "$APK_PATH" ]; then
                   echo "Found APK: $APK_PATH"
