@@ -43,7 +43,7 @@ workflows:
                 #!/bin/bash
                 set -ex
                 export PATH="/opt/homebrew/opt/gradle@8/bin:$PATH"
-                cd cordova-template
+                cd "$BITRISE_SOURCE_DIR"
                 cordova create $CORDOVA_PROJECT_DIR $BUNDLE_ID "$APP_NAME"
                 cd $CORDOVA_PROJECT_DIR
                 cp ../config.xml ./config.xml
@@ -58,7 +58,7 @@ workflows:
                 #!/bin/bash
                 set -ex
                 export PATH="/opt/homebrew/opt/gradle@8/bin:$PATH"
-                cd cordova-template/$CORDOVA_PROJECT_DIR
+                cd "$BITRISE_SOURCE_DIR/$CORDOVA_PROJECT_DIR"
                 cordova build android --debug
                 echo "Searching for APK files..."
                 find platforms -name "*.apk" -type f 2>/dev/null || true
@@ -98,7 +98,7 @@ workflows:
                 #!/bin/bash
                 set -ex
                 export PATH="/opt/homebrew/opt/gradle@8/bin:$PATH"
-                cd cordova-template
+                cd "$BITRISE_SOURCE_DIR"
                 cordova create $CORDOVA_PROJECT_DIR $BUNDLE_ID "$APP_NAME"
                 cd $CORDOVA_PROJECT_DIR
                 cp ../config.xml ./config.xml
@@ -113,7 +113,7 @@ workflows:
                 #!/bin/bash
                 set -ex
                 export PATH="/opt/homebrew/opt/gradle@8/bin:$PATH"
-                cd cordova-template/$CORDOVA_PROJECT_DIR
+                cd "$BITRISE_SOURCE_DIR/$CORDOVA_PROJECT_DIR"
                 cordova build android --release -- --packageType=apk
                 echo "Searching for APK files..."
                 find platforms -name "*.apk" -type f 2>/dev/null || true
@@ -153,7 +153,7 @@ workflows:
             - content: |
                 #!/bin/bash
                 set -ex
-                cd cordova-template
+                cd "$BITRISE_SOURCE_DIR"
                 cordova create $CORDOVA_PROJECT_DIR $BUNDLE_ID "$APP_NAME"
                 cd $CORDOVA_PROJECT_DIR
                 cp ../config.xml ./config.xml
@@ -168,7 +168,7 @@ workflows:
             - content: |
                 #!/bin/bash
                 set -ex
-                cd cordova-template/$CORDOVA_PROJECT_DIR
+                cd "$BITRISE_SOURCE_DIR/$CORDOVA_PROJECT_DIR"
                 cordova build ios --release --device
                 IPA_PATH=$(find platforms/ios -name "*.ipa" | head -1)
                 if [ -n "$IPA_PATH" ] && [ -f "$IPA_PATH" ]; then
