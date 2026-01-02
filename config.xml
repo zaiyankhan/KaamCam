@@ -4,7 +4,7 @@
     <description>Mobile-first field documentation and project coordination platform for construction and service companies</description>
     <author email="support@kaamcam.com" href="https://kaamcam.com">KaamCam Team</author>
     
-    <content src="index.html" />
+    <content src="https://kaamcam.com/login" />
     
     <access origin="*" />
     <allow-intent href="http://*/*" />
@@ -98,7 +98,6 @@
     <plugin name="cordova-plugin-file" spec="^8.0.1" />
     <plugin name="cordova-plugin-network-information" spec="^3.0.0" />
     <plugin name="cordova-plugin-statusbar" spec="^4.0.0" />
-    <plugin name="cordova-plugin-splashscreen" spec="^6.0.1" />
     <plugin name="cordova-plugin-media-capture" spec="^5.0.0" />
     <plugin name="cordova-plugin-inappbrowser" spec="^6.0.0" />
     
