@@ -43,6 +43,7 @@ workflows:
                 #!/bin/bash
                 set -ex
                 export PATH="/opt/homebrew/opt/gradle@8/bin:$PATH"
+                cd cordova-template
                 cordova create $CORDOVA_PROJECT_DIR $BUNDLE_ID "$APP_NAME"
                 cd $CORDOVA_PROJECT_DIR
                 cp ../config.xml ./config.xml
@@ -57,13 +58,21 @@ workflows:
                 #!/bin/bash
                 set -ex
                 export PATH="/opt/homebrew/opt/gradle@8/bin:$PATH"
-                cd $CORDOVA_PROJECT_DIR
+                cd cordova-template/$CORDOVA_PROJECT_DIR
                 cordova build android --debug
-                APK_PATH=$(find . -name "*debug*.apk" -type f | head -1)
-                [ -z "$APK_PATH" ] && APK_PATH=$(find . -name "*.apk" -type f | head -1)
-                if [ -f "$APK_PATH" ]; then
+                echo "Searching for APK files..."
+                find platforms -name "*.apk" -type f 2>/dev/null || true
+                APK_PATH=$(find platforms -name "*debug*.apk" -type f 2>/dev/null | head -1)
+                if [ -z "$APK_PATH" ]; then
+                  APK_PATH=$(find platforms -name "*.apk" -type f 2>/dev/null | head -1)
+                fi
+                if [ -n "$APK_PATH" ] && [ -f "$APK_PATH" ]; then
+                  echo "Found APK: $APK_PATH"
                   cp "$APK_PATH" "$BITRISE_DEPLOY_DIR/kaamcam-debug.apk"
                   envman add --key BITRISE_APK_PATH --value "$BITRISE_DEPLOY_DIR/kaamcam-debug.apk"
+                else
+                  echo "No APK found!"
+                  exit 1
                 fi
       - deploy-to-bitrise-io@2: {}
 
@@ -89,6 +98,7 @@ workflows:
                 #!/bin/bash
                 set -ex
                 export PATH="/opt/homebrew/opt/gradle@8/bin:$PATH"
+                cd cordova-template
                 cordova create $CORDOVA_PROJECT_DIR $BUNDLE_ID "$APP_NAME"
                 cd $CORDOVA_PROJECT_DIR
                 cp ../config.xml ./config.xml
@@ -103,17 +113,21 @@ workflows:
                 #!/bin/bash
                 set -ex
                 export PATH="/opt/homebrew/opt/gradle@8/bin:$PATH"
-                cd $CORDOVA_PROJECT_DIR
+                cd cordova-template/$CORDOVA_PROJECT_DIR
                 cordova build android --release -- --packageType=apk
-                APK_PATH=$(find . -name "*release*.apk" -type f | head -1)
-                [ -z "$APK_PATH" ] && APK_PATH=$(find . -name "*.apk" -type f | head -1)
-                if [ -f "$APK_PATH" ]; then
+                echo "Searching for APK files..."
+                find platforms -name "*.apk" -type f 2>/dev/null || true
+                APK_PATH=$(find platforms -name "*release*.apk" -type f 2>/dev/null | head -1)
+                if [ -z "$APK_PATH" ]; then
+                  APK_PATH=$(find platforms -name "*.apk" -type f 2>/dev/null | head -1)
+                fi
+                if [ -n "$APK_PATH" ] && [ -f "$APK_PATH" ]; then
+                  echo "Found APK: $APK_PATH"
                   cp "$APK_PATH" "$BITRISE_DEPLOY_DIR/kaamcam-release.apk"
                   envman add --key BITRISE_APK_PATH --value "$BITRISE_DEPLOY_DIR/kaamcam-release.apk"
-                fi
-                AAB_PATH=$(find . -name "*.aab" -type f | head -1)
-                if [ -f "$AAB_PATH" ]; then
-                  cp "$AAB_PATH" "$BITRISE_DEPLOY_DIR/kaamcam-release.aab"
+                else
+                  echo "No APK found!"
+                  exit 1
                 fi
       - sign-apk@1:
           run_if: '{{getenv "BITRISEIO_ANDROID_KEYSTORE_URL" | ne ""}}'
@@ -139,6 +153,7 @@ workflows:
             - content: |
                 #!/bin/bash
                 set -ex
+                cd cordova-template
                 cordova create $CORDOVA_PROJECT_DIR $BUNDLE_ID "$APP_NAME"
                 cd $CORDOVA_PROJECT_DIR
                 cp ../config.xml ./config.xml
@@ -153,10 +168,17 @@ workflows:
             - content: |
                 #!/bin/bash
                 set -ex
-                cd $CORDOVA_PROJECT_DIR
+                cd cordova-template/$CORDOVA_PROJECT_DIR
                 cordova build ios --release --device
                 IPA_PATH=$(find platforms/ios -name "*.ipa" | head -1)
-                [ -f "$IPA_PATH" ] && cp "$IPA_PATH" "$BITRISE_DEPLOY_DIR/kaamcam-release.ipa" && envman add --key BITRISE_IPA_PATH --value "$BITRISE_DEPLOY_DIR/kaamcam-release.ipa"
+                if [ -n "$IPA_PATH" ] && [ -f "$IPA_PATH" ]; then
+                  echo "Found IPA: $IPA_PATH"
+                  cp "$IPA_PATH" "$BITRISE_DEPLOY_DIR/kaamcam-release.ipa"
+                  envman add --key BITRISE_IPA_PATH --value "$BITRISE_DEPLOY_DIR/kaamcam-release.ipa"
+                else
+                  echo "No IPA found!"
+                  exit 1
+                fi
       - deploy-to-bitrise-io@2: {}
 
 meta:
